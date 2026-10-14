@@ -1,0 +1,352 @@
+---
+// ── STREAMING COMPONENT ──
+// This component handles the product fetch and rendering
+// Allows the parent page to stream layout/head immediately
+import OrderForm from "@/theme/components/order/OrderForm.astro";
+import AddToCartButton from "@/theme/components/cart/AddToCartButton.astro";
+import ProductGallery from "@/theme/components/product/ProductGallery.astro";
+import ProductInfo from "@/theme/components/product/ProductInfo.astro";
+import ReviewsIsland from "@/theme/components/product/ReviewsIsland.astro";
+import RelatedProducts from "@/theme/components/product/RelatedProducts.astro";
+import ShippingIsland from "@/theme/components/product/ShippingIsland.astro";
+import { getProductJsonLd } from "@/theme/utils/seo";
+import { fetchProductByHandle } from "@/core/api/client";
+import { getThumbnailImage } from "@/core/utils/image-optimizer";
+import { productImageSource } from "@/theme/utils/product-image";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  slug: string;
+  config: any;
+  content: any;
+  isRTL: boolean;
+  fieldErrors: any;
+  serverError: string | null;
+}
+
+const { slug, config, content, isRTL, fieldErrors, serverError } = Astro.props;
+
+// Fetch product data (this component streams when ready)
+const product = await fetchProductByHandle(slug);
+
+if (!product) return Astro.redirect("/");
+
+const cur = config.currencySymbol;
+const defaultVariant = product.hasVariants
+  ? (product.variants.find((v: typeof product.variants[0]) => v.isDefault) ?? product.variants[0])
+  : null;
+const basePrice    = defaultVariant?.price ?? product.price;
+
+// Thumbnail for the cart drawer and the checkout summary. Resized to 80px
+// because it renders at 64 — shipping a full gallery image for a thumbnail is
+// wasted bandwidth on a phone. See product-image.ts for the fallback rule.
+const cartImageSrc = productImageSource(product);
+const cartImage = cartImageSrc ? getThumbnailImage(cartImageSrc) : null;
+const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice;
+const hasDiscount  = comparePrice != null && comparePrice > basePrice;
+const discountPct  = hasDiscount ? Math.round((1 - basePrice / comparePrice!) * 100) : 0;
+
+const isOutOfStock = product.trackInventory && product.inventory === 0;
+const isLowStock   = product.trackInventory && product.inventory > 0 && product.inventory <= 5;
+const lowStockText = content.lowStock.replace("{n}", String(product.inventory));
+
+const defaultVariantId = defaultVariant?.id ?? null;
+const jsonLd = getProductJsonLd(product, basePrice);
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+<!-- Data bridge: server-computed values → client script -->
+<div
+  id="page-data"
+  class="sr-only"
+  data-variants={JSON.stringify(product.variants)}
+  data-base-price={basePrice}
+  data-compare-price={comparePrice ?? ""}
+  data-cur={cur}
+  data-is-rtl={isRTL ? "1" : "0"}
+  data-shipping-label={content.shippingLabel}
+  data-shipping-calc={content.shippingCalculated}
+  data-shipping-free={content.shippingFree}
+  data-total-label={content.totalLabel}
+  data-commune-placeholder={content.formCommunePlaceholder}
+  data-commune-loading={content.formCommuneLoading}
+  data-commune-disabled={content.formCommuneDisabled}
+  data-offers={JSON.stringify(product.offers)}
+  data-offer-free-label={content.offerFreeLabel}
+  data-offer-active={content.offerActive}
+  data-offer-unlocked={content.offerUnlocked}
+  data-offer-add-more={content.offerAddMore}
+  data-offer-add-one={content.offerAddOne}
+  data-offer-you-get={content.offerYouGet}
+  data-track-inventory={product.trackInventory ? "1" : "0"}
+  data-out-of-stock-label={content.outOfStock}
+  data-qty-max-stock={content.qtyMaxStock}
+  data-inventory={String(product.inventory)}
+  data-pixel-id={config.pixelId ?? ""}
+  data-phone-invalid={content.formPhoneInvalid}
+  data-product-id={product.id}
+  data-product-name={product.name}
+/>
+
+<!-- Dynamic data Island (Deferred) -->
+<ShippingIsland server:defer />
+
+<div class="max-w-5xl mx-auto px-0 sm:px-5 py-0 sm:py-8">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-12">
+
+    <!-- ── LEFT: Images ── -->
+    <div>
+      <ProductGallery
+        product={product}
+        hasDiscount={hasDiscount}
+        discountPct={discountPct}
+        isRTL={isRTL}
+        content={content}
+      />
+      <ProductInfo
+        product={product}
+        basePrice={basePrice}
+        comparePrice={comparePrice}
+        cur={cur}
+        isLowStock={isLowStock}
+        lowStockText={lowStockText}
+        isDesktop={true}
+      />
+    </div>
+
+    <!-- ── RIGHT: Product info + Order form ──
+         Sticky on desktop so the buy box stays reachable while the left
+         column (gallery + description) scrolls. `self-start` lets a grid
+         child stick instead of stretching to the row height. -->
+    <div class="px-5 sm:px-0 py-6 sm:py-0 lg:sticky lg:top-6 lg:self-start">
+
+      <!-- Mobile Info -->
+      <ProductInfo
+        product={product}
+        basePrice={basePrice}
+        comparePrice={comparePrice}
+        cur={cur}
+        isLowStock={isLowStock}
+        lowStockText={lowStockText}
+      />
+
+      <!-- Size guide button -->
+      <button
+        data-size-guide-trigger
+        class="flex items-center gap-1.5 text-sm font-bold underline underline-offset-2 mb-4"
+        style="color: var(--clr-text-2)"
+      >
+        <Icon name="heroicons:scale" class="w-4 h-4" />
+        دليل المقاسات
+      </button>
+
+      <!-- Flash sale urgency banner -->
+      <div
+        id="flash-sale-banner"
+        data-discounted={hasDiscount ? "true" : "false"}
+        class:list={["mb-4", !hasDiscount && "hidden"]}
+      >
+        <div class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-black"
+          style="background: linear-gradient(135deg, #dc2626, #f59e0b)">
+          <Icon name="heroicons:rocket-launch" class="w-4 h-4" />
+          <span>عرض ينتهي خلال</span>
+          <span class="flash-time font-mono tabular-nums">00:00:00</span>
+        </div>
+      </div>
+
+      <!-- "X people viewing" counter -->
+      <div class="flex items-center gap-2 mb-4">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        <p id="viewing-counter" class="text-xs font-bold" style="color: var(--clr-text-2)">
+          يشاهدون هذا المنتج الآن
+        </p>
+      </div>
+
+      <!-- Free shipping progress bar -->
+      <div id="free-shipping-progress" class="mb-4" data-threshold="400" data-price={basePrice}>
+        <div class="flex items-center justify-between text-xs font-bold mb-1.5">
+          <span class="flex items-center gap-1" style="color: var(--clr-text-2)"><Icon name="heroicons:truck" class="w-4 h-4" /> توصيل مجاني</span>
+          <span id="fs-label" style="color: var(--clr-accent)">—</span>
+        </div>
+        <div class="h-2 rounded-full overflow-hidden" style="background: var(--clr-surface-alt)">
+          <div class="fs-fill h-full rounded-full transition-all duration-700"
+            style="background: linear-gradient(90deg, var(--clr-accent), #22c55e); width: 0%">
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock countdown bar -->
+      {isLowStock && (
+        <div class="mb-4" id="stock-progress-bar" data-inventory={product.inventory} data-initial-stock={product.inventory + 10}>
+          <div class="flex items-center justify-between text-xs font-bold mb-1">
+            <span style="color: var(--clr-text-2)">الكمية المتبقية</span>
+            <span style="color: var(--clr-accent)">{product.inventory} قطع فقط</span>
+          </div>
+          <div class="ez-stock-bar">
+            <div class="ez-stock-bar-fill" id="stock-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      )}
+
+      <OrderForm
+        product={product}
+        content={content}
+        fieldErrors={fieldErrors}
+        serverError={serverError}
+        basePrice={basePrice}
+        defaultVariant={defaultVariant ?? null}
+        cur={cur}
+        isRTL={isRTL}
+        offers={product.offers}
+        defaultVariantId={defaultVariantId}
+        isOutOfStock={isOutOfStock}
+        otpEnabled={config.otpEnabled === true}
+        turnstileEnabled={config.turnstileEnabled === true}
+        turnstileSiteKey={config.turnstileSiteKey ?? null}
+        pages={config.pages ?? []}
+        formPolicy={config.checkoutForm}
+      >
+        {/* Sits inside the order card, directly under the confirm button.
+            Secondary by design: the direct order form stays the primary
+            action. This serves the shopper who wants more than one product and
+            never competes with the one-step checkout that converts. */}
+        {config.cartEnabled && !isOutOfStock && (
+          <Fragment slot="secondary-action">
+            <AddToCartButton
+              product={product}
+              content={content}
+              basePrice={basePrice}
+              defaultVariant={defaultVariant ?? null}
+              image={cartImage}
+            />
+          </Fragment>
+        )}
+      </OrderForm>
+    </div>
+  </div>
+</div>
+
+<!-- Reviews section (Deferred Server Island) -->
+{config.reviewsEnabled && (
+  <div class="max-w-5xl mx-auto px-5 pb-12">
+    <ReviewsIsland productId={product.id} content={content} server:defer>
+      <!-- Skeleton fallback while loading -->
+      <div slot="fallback" class="space-y-8 mt-12 pt-10" style="border-top: 1px solid var(--clr-border)">
+        <div class="h-8 rounded-lg w-1/4 ez-skeleton"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div class="space-y-4">
+            {[1,2,3].map(() => (
+              <div class="h-32 rounded-2xl ez-skeleton"></div>
+            ))}
+          </div>
+          <div class="h-64 rounded-2xl ez-skeleton"></div>
+        </div>
+      </div>
+    </ReviewsIsland>
+  </div>
+)}
+
+{/* ── Trust badges (MaCod) ────────────────────────────────────────────────────── */}
+<div class="max-w-5xl mx-auto px-5 pb-8">
+  <div class="flex flex-wrap items-center justify-center gap-4 py-6 rounded-2xl" style="background: var(--clr-surface)">
+    <span class="flex items-center gap-2 text-sm font-bold" style="color: var(--clr-text-2)">
+      <Icon name="heroicons:banknotes" class="w-5 h-5" style="color: var(--clr-accent)" /> دفع عند الاستلام
+    </span>
+    <span class="flex items-center gap-2 text-sm font-bold" style="color: var(--clr-text-2)">
+      <Icon name="heroicons:truck" class="w-5 h-5" style="color: var(--clr-accent)" /> توصيل 24-48 ساعة
+    </span>
+    <span class="flex items-center gap-2 text-sm font-bold" style="color: var(--clr-text-2)">
+      <Icon name="heroicons:check-badge" class="w-5 h-5" style="color: var(--clr-accent)" /> إرجاع خلال 14 يوم
+    </span>
+  </div>
+</div>
+
+{/* ── Size guide modal ─────────────────────────────────────────────────────────── */}
+<div id="size-guide-modal" class="hidden ez-size-guide-overlay" style="display: none;">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full" style="background: var(--clr-surface)">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-black" style="color: var(--clr-text)">دليل المقاسات</h3>
+        <button data-close-modal class="absolute top-3 end-3" style="color: var(--clr-text-2)">
+          <Icon name="heroicons:x-mark" class="w-6 h-6" />
+        </button>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--clr-border)">
+            <th class="py-2 text-start">المقاس</th>
+            <th class="py-2 text-center">الصدر (سم)</th>
+            <th class="py-2 text-center">الخصر (سم)</th>
+            <th class="py-2 text-center">الطول (سم)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--clr-border)"><td class="py-2 font-bold">S</td><td class="text-center">96</td><td class="text-center">80</td><td class="text-center">68</td></tr>
+          <tr style="border-bottom: 1px solid var(--clr-border)"><td class="py-2 font-bold">M</td><td class="text-center">100</td><td class="text-center">84</td><td class="text-center">70</td></tr>
+          <tr style="border-bottom: 1px solid var(--clr-border)"><td class="py-2 font-bold">L</td><td class="text-center">104</td><td class="text-center">88</td><td class="text-center">72</td></tr>
+          <tr><td class="py-2 font-bold">XL</td><td class="text-center">108</td><td class="text-center">92</td><td class="text-center">74</td></tr>
+        </tbody>
+      </table>
+      <p class="text-xs mt-4" style="color: var(--clr-text-2)">القياسات تقريبية وقد تختلف حسب القماش والتصميم.</p>
+    </div>
+  </div>
+</div>
+
+{/* ── Recent orders ticker ─────────────────────────────────────────────────────── */}
+<div id="orders-ticker" class="ez-orders-ticker translate-y-[150%] opacity-0">
+  <!-- Filled by ezzaro-enhancements.ts -->
+</div>
+
+{/* Exit rescue, last on the page. Deferred so the fetch happens after the
+    product is already on screen — it can never cost the page its LCP, and a
+    failed request simply means no section. */}
+<RelatedProducts
+  productId={product.id}
+  categoryId={product.category?.id ?? null}
+  currencySymbol={cur}
+  content={content}
+  server:defer
+/>
+
+{/* ── STICKY ORDER CTA — fixed to the bottom on mobile while the order form is out of
+     view; sticky-cta.ts hides it via IntersectionObserver the moment the form enters the
+     viewport. Mobile-only: hidden on desktop where the form is already sticky in column 2. ── */}
+{!isOutOfStock && (
+  <a
+    href="#order-section"
+    id="product-sticky-cta"
+    class="btn-primary product-sticky-cta lg:hidden"
+  >
+    <span>{content.orderCta}</span>
+    <Icon name="heroicons:chevron-down" class="w-5 h-5 shrink-0" />
+  </a>
+)}
+
+<style>
+  /* Sticky CTA — floats above content on mobile until the form scrolls into
+     view (sticky-cta.ts toggles .is-hidden). Colors/radius/shadow come
+     from .btn-primary + tokens; sizes/offsets are layout, not design. */
+  .product-sticky-cta {
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 0.75rem);
+    inset-inline: 0;
+    margin-inline: auto;
+    width: min(24rem, calc(100% - 2rem));
+    z-index: 45;
+    box-shadow: var(--shadow-primary);
+    font-weight: 800;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  .product-sticky-cta.is-hidden {
+    transform: translateY(150%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  @media (min-width: 1024px) {
+    .product-sticky-cta {
+      display: none !important;
+    }
+  }
+</style>
+

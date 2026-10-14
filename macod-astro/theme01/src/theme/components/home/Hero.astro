@@ -1,0 +1,146 @@
+---
+import type { StoreFrontContent } from "@/theme/config/content";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  content: StoreFrontContent;
+}
+
+const { content } = Astro.props;
+---
+
+<section class="hero-gradient overflow-hidden relative -mt-[calc(4.5rem+var(--safe-top))] pt-[calc(4.5rem+var(--safe-top))]">
+  <!-- Animated background shapes -->
+  <div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+    <div class="hero-blob hero-blob-1"></div>
+    <div class="hero-blob hero-blob-2"></div>
+    <div class="hero-blob hero-blob-3"></div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
+    <div class="flex items-center justify-center min-h-[500px] sm:min-h-[550px] lg:min-h-[600px]">
+      <div class="flex flex-col justify-center py-16 sm:py-20 lg:py-24 text-center">
+        <div class="space-y-6 sm:space-y-8 max-w-2xl mx-auto">
+
+          <!-- Eyebrow badge — animated pulse -->
+          {content.heroEyebrow && (
+            <div class="animate-fade-in-up">
+              <span class="inline-flex items-center gap-2 text-[0.75rem] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full bg-white/80 border border-black/[0.04] backdrop-blur-md"
+                style="color: var(--clr-text)">
+                <span class="w-2 h-2 rounded-full animate-pulse" style="background: var(--clr-accent)"></span>
+                {content.heroEyebrow}
+              </span>
+            </div>
+          )}
+
+          <!-- Headline — bold, large, eye-catching -->
+          <h1
+            class="text-[2.5rem] sm:text-[4rem] lg:text-[5.5rem] font-black leading-[1.05] tracking-tight animate-fade-in-up [animation-delay:100ms] text-balance"
+            style="color: var(--clr-text)"
+          >
+            {content.heroTitle}
+          </h1>
+
+          <!-- Subtitle -->
+          <p
+            class="text-[1rem] sm:text-lg lg:text-xl font-medium leading-relaxed opacity-70 animate-fade-in-up [animation-delay:200ms] text-pretty max-w-md mx-auto"
+            style="color: var(--clr-text)"
+          >
+            {content.heroSubtitle}
+          </p>
+
+          <!-- CTA buttons — bold, high contrast -->
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 animate-fade-in-up [animation-delay:300ms]">
+            <a
+              href="/products"
+              class="group !w-full sm:!w-auto !px-10 h-14 sm:h-16 text-base font-black rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 hover:shadow-2xl"
+              style="background: var(--clr-text); color: var(--clr-surface)"
+            >
+              {content.heroCtaPrimary}
+              <Icon name="heroicons:arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            </a>
+            <a
+              href="#best-sellers"
+              class="inline-flex items-center justify-center px-10 h-14 sm:h-16 font-black text-sm transition-all duration-300 active:scale-95 w-full sm:w-auto rounded-2xl border-2 hover:bg-white/50 backdrop-blur-sm"
+              style="border-color: var(--clr-border); color: var(--clr-text)"
+            >
+              {content.heroCtaSecondary}
+            </a>
+          </div>
+
+          <!-- Trust indicators row -->
+          <div class="flex items-center justify-center gap-6 pt-6 animate-fade-in-up [animation-delay:400ms]">
+            <div class="flex items-center gap-1.5 text-xs font-bold" style="color: var(--clr-text-2)">
+              <Icon name="heroicons:banknotes" class="w-4 h-4" style="color: var(--clr-accent)" />
+              دفع عند الاستلام
+            </div>
+            <div class="flex items-center gap-1.5 text-xs font-bold" style="color: var(--clr-text-2)">
+              <Icon name="heroicons:truck" class="w-4 h-4" style="color: var(--clr-accent)" />
+              توصيل سريع
+            </div>
+            <div class="flex items-center gap-1.5 text-xs font-bold" style="color: var(--clr-text-2)">
+              <Icon name="heroicons:check-badge" class="w-4 h-4" style="color: var(--clr-accent)" />
+              جودة مضمونة
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero-gradient {
+    background: radial-gradient(ellipse at top, color-mix(in srgb, var(--clr-accent) 8%, transparent), transparent 60%),
+                radial-gradient(ellipse at bottom right, color-mix(in srgb, var(--clr-primary) 5%, transparent), transparent 50%),
+                var(--clr-bg);
+  }
+
+  .hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.15;
+    animation: hero-float 20s ease-in-out infinite;
+  }
+  .hero-blob-1 {
+    width: 400px;
+    height: 400px;
+    top: -100px;
+    inset-inline-start: -100px;
+    background: var(--clr-accent);
+    animation-delay: 0s;
+  }
+  .hero-blob-2 {
+    width: 300px;
+    height: 300px;
+    bottom: -50px;
+    inset-inline-end: -50px;
+    background: var(--clr-primary);
+    animation-delay: 7s;
+  }
+  .hero-blob-3 {
+    width: 200px;
+    height: 200px;
+    top: 50%;
+    inset-inline-start: 60%;
+    background: var(--clr-accent);
+    animation-delay: 14s;
+  }
+
+  @keyframes hero-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -30px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    opacity: 0;
+  }
+</style>

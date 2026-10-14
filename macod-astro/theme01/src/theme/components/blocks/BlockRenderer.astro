@@ -1,0 +1,376 @@
+---
+/**
+ * BlockRenderer — renders landing page blocks from JSON.
+ *
+ * Switches on block.type and renders the matching Astro component.
+ * Each block type has its own inline render in this file.
+ *
+ * The renderer is recursive: container/columns blocks contain nested
+ * blocks, which are rendered by calling <BlockRenderer> again.
+ *
+ * Unknown block types render nothing (graceful degradation) — a typo in
+ * the block type string never breaks the page, it just skips that block.
+ */
+
+import type { PageBlock } from "@/core/lib/landing-page-blocks";
+import BlockRenderer from "./BlockRenderer.astro";
+
+interface Props {
+  blocks: PageBlock[];
+}
+
+const { blocks } = Astro.props;
+---
+
+{blocks.map((block) => {
+  switch (block.type) {
+    case "dynamic_products": return <div data-block="dynamic_products" data-source={block.data.source} data-limit={block.data.limit ?? 4} />;
+    case "product_reviews": return <div data-block="product_reviews" data-product-id={block.data.productId} />;
+    case "categories_list": return <div data-block="categories_list" data-title={block.data.title} />;
+    case "express_checkout": return <div data-block="express_checkout" data-button-text={block.data.buttonText} />;
+    case "product_image": return <img data-block="product_image" src={block.data.src} alt={block.data.alt ?? ""} />;
+    case "product_variant": return <div data-block="product_variant" data-product-id={block.data.productId} />;
+    case "icons_box": return (
+      <div data-block="icons_box" class="grid gap-4" style={`grid-template-columns: repeat(${block.data.columns ?? 3}, 1fr)`}>
+        {block.data.items.map((item) => (
+          <div class="text-center">
+            <div class="text-3xl mb-2">{item.icon}</div>
+            <div class="font-bold">{item.title}</div>
+            {item.desc && <div class="text-sm opacity-70">{item.desc}</div>}
+          </div>
+        ))}
+      </div>
+    );
+    case "html_editor": return <Fragment set:html={block.data.html} />;
+    case "title": {
+      const Tag = `h${block.data.level ?? 2}` as "h1" | "h2" | "h3" | "h4";
+      return <Tag class="font-black" style={`text-align: ${block.data.align ?? "center"}; color: ${block.data.color ?? "inherit"}`}>{block.data.text}</Tag>;
+    }
+    case "list": return (
+      <ul data-block="list" class:list={[block.data.ordered ? "list-decimal" : "list-disc", "ps-6 space-y-1"]}>
+        {block.data.items.map((item) => <li>{item}</li>)}
+      </ul>
+    );
+    case "images_list": return (
+      <div data-block="images_list" class="grid gap-3" style={`grid-template-columns: repeat(${block.data.columns ?? 2}, 1fr)`}>
+        {block.data.images.map((img) => <img src={img.src} alt={img.alt ?? ""} class="w-full rounded-xl" />)}
+      </div>
+    );
+    case "image": return <img data-block="image" src={block.data.src} alt={block.data.alt ?? ""} class="w-full rounded-xl" style={`max-width: ${block.data.maxWidth ?? 100}%; border-radius: ${block.data.borderRadius ?? 12}px`} />;
+    case "youtube": return (
+      <div data-block="youtube" class="relative w-full" style="padding-bottom: 56.25%">
+        <iframe
+          src={`https://www.youtube.com/embed/${block.data.videoId}${block.data.autoplay ? "?autoplay=1" : ""}${block.data.mute ? "&mute=1" : ""}`}
+          title={block.data.title ?? "YouTube video"}
+          class="absolute inset-0 w-full h-full rounded-xl"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        />
+      </div>
+    );
+    case "columns": return (
+      <div data-block="columns" class="grid gap-4" style={`grid-template-columns: repeat(${block.data.columns.length}, 1fr)`}>
+        {block.data.columns.map((colBlocks) => (
+          <div>
+            <BlockRenderer blocks={colBlocks} />
+          </div>
+        ))}
+      </div>
+    );
+    case "container": return (
+      <div data-block="container" style={`padding: ${block.data.padding ?? 0}px; background: ${block.data.background ?? "transparent"}; max-width: ${block.data.maxWidth ?? 100}%; border-radius: ${block.data.borderRadius ?? 0}px`}>
+        <BlockRenderer blocks={block.data.blocks} />
+      </div>
+    );
+    case "spacer": return <div data-block="spacer" style={`height: ${block.data.height}px`} />;
+    case "header": return (
+      <header data-block="header" class="flex items-center justify-between px-4 py-3">
+        {block.data.logo && <img src={block.data.logo} alt="Logo" class="h-8" />}
+        {block.data.links && (
+          <nav class="flex gap-4">
+            {block.data.links.map((link) => <a href={link.url} class="font-bold">{link.label}</a>)}
+          </nav>
+        )}
+      </header>
+    );
+    case "footer": return (
+      <footer data-block="footer" class="px-4 py-6 text-center">
+        {block.data.text && <p>{block.data.text}</p>}
+        {block.data.links && (
+          <nav class="flex justify-center gap-4 mt-2">
+            {block.data.links.map((link) => <a href={link.url} class="text-sm underline">{link.label}</a>)}
+          </nav>
+        )}
+      </footer>
+    );
+    case "link_button": return (
+      <a
+        href={block.data.url}
+        target={block.data.openNewTab ? "_blank" : undefined}
+        class:list={[
+          "inline-flex items-center justify-center font-black rounded-2xl transition-all active:scale-95",
+          block.data.size === "sm" ? "px-4 py-2 text-sm" : block.data.size === "lg" ? "px-8 py-4 text-lg" : "px-6 py-3",
+          block.data.fullWidth && "w-full",
+          block.data.variant === "secondary" ? "bg-gray-200 text-gray-900" : block.data.variant === "outline" ? "border-2 border-current" : "bg-[var(--clr-primary)] text-white",
+        ]}
+      >
+        {block.data.text}
+      </a>
+    );
+    case "custom_code": return <Fragment set:html={block.data.html} />;
+    case "countdown": return (
+      <div data-block="countdown" class="text-center rounded-2xl p-4" style={`background: ${block.data.backgroundColor ?? "#f0f0f0"}; color: ${block.data.color ?? "inherit"}`}>
+        {block.data.label && <div class="font-bold mb-2">{block.data.label}</div>}
+        <div class="text-3xl font-black font-mono" data-countdown-end={block.data.endDate} data-countdown-format={block.data.format ?? "dh:ms"}>
+          --:--:--:--
+        </div>
+      </div>
+    );
+    case "product_button": return (
+      <div data-block="product_button" class="flex gap-4 items-center" data-layout={block.data.layout ?? "horizontal"}>
+        <div data-block="product_button_product" data-product-id={block.data.productId} />
+        {block.data.buttonText && <button class="btn-primary">{block.data.buttonText}</button>}
+      </div>
+    );
+    case "product_button_timer": return (
+      <div data-block="product_button_timer" class="flex gap-4 items-center" data-product-id={block.data.productId}>
+        <div data-block="product_button_timer_product" />
+        {block.data.buttonText && <button class="btn-primary">{block.data.buttonText}</button>}
+        <div class="text-center">
+          {block.data.timerLabel && <div class="text-sm">{block.data.timerLabel}</div>}
+          <div class="text-xl font-black font-mono" data-countdown-end={block.data.endDate}>--:--:--</div>
+        </div>
+      </div>
+    );
+    case "text_2_columns": return (
+      <div data-block="text_2_columns" class="grid gap-4" style="grid-template-columns: 1fr 1fr;">
+        <div>
+          {block.data.leftTitle && <h3 class="font-black mb-2">{block.data.leftTitle}</h3>}
+          <p>{block.data.leftText}</p>
+        </div>
+        <div>
+          {block.data.rightTitle && <h3 class="font-black mb-2">{block.data.rightTitle}</h3>}
+          <p>{block.data.rightText}</p>
+        </div>
+      </div>
+    );
+    case "text_3_columns": return (
+      <div data-block="text_3_columns" class="grid gap-4" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div>
+          {block.data.col1Title && <h3 class="font-black mb-2">{block.data.col1Title}</h3>}
+          <p>{block.data.col1Text}</p>
+        </div>
+        <div>
+          {block.data.col2Title && <h3 class="font-black mb-2">{block.data.col2Title}</h3>}
+          <p>{block.data.col2Text}</p>
+        </div>
+        <div>
+          {block.data.col3Title && <h3 class="font-black mb-2">{block.data.col3Title}</h3>}
+          <p>{block.data.col3Text}</p>
+        </div>
+      </div>
+    );
+    case "button_2_columns": return (
+      <div data-block="button_2_columns" class="grid gap-4" style="grid-template-columns: 1fr 1fr;">
+        <a href={block.data.left.url} class="btn-primary text-center">{block.data.left.text}</a>
+        <a href={block.data.right.url} class="btn-primary text-center">{block.data.right.text}</a>
+      </div>
+    );
+    case "button_3_columns": return (
+      <div data-block="button_3_columns" class="grid gap-4" style="grid-template-columns: 1fr 1fr 1fr;">
+        <a href={block.data.col1.url} class="btn-primary text-center">{block.data.col1.text}</a>
+        <a href={block.data.col2.url} class="btn-primary text-center">{block.data.col2.text}</a>
+        <a href={block.data.col3.url} class="btn-primary text-center">{block.data.col3.text}</a>
+      </div>
+    );
+    case "offer_timer": return (
+      <div data-block="offer_timer" class="rounded-2xl p-6 text-center" style="background: linear-gradient(135deg, #7c3aed, #ec4899); color: white;">
+        <h3 class="text-2xl font-black mb-2">{block.data.title}</h3>
+        {block.data.description && <p class="mb-4">{block.data.description}</p>}
+        <div class="flex items-center justify-center gap-4 mb-4">
+          {block.data.originalPrice && <span class="text-xl line-through opacity-70">{block.data.originalPrice} درهم</span>}
+          <span class="text-4xl font-black">{block.data.offerPrice} درهم</span>
+        </div>
+        <div class="text-2xl font-black font-mono mb-4" data-countdown-end={block.data.endDate}>--:--:--</div>
+        {block.data.buttonText && <a href={block.data.buttonUrl ?? "#"} class="inline-block bg-white text-purple-600 px-8 py-3 rounded-2xl font-black">{block.data.buttonText}</a>}
+      </div>
+    );
+    case "social_media": return (
+      <div data-block="social_media" class="text-center">
+        {block.data.title && <h3 class="font-black mb-4">{block.data.title}</h3>}
+        <div class="flex justify-center gap-6">
+          {block.data.platforms.map((p) => (
+            <a href={p.url} target="_blank" class="flex flex-col items-center">
+              <span class="text-3xl">
+                {p.platform === "facebook" && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                )}
+                {p.platform === "instagram" && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                )}
+                {p.platform === "tiktok" && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.94v15.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/></svg>
+                )}
+                {p.platform === "youtube" && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                )}
+                {p.platform === "whatsapp" && (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                )}
+              </span>
+              {p.followers && <span class="text-sm mt-1">{p.followers}</span>}
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+    case "faq": return (
+      <div data-block="faq">
+        {block.data.title && <h3 class="font-black text-center mb-4">{block.data.title}</h3>}
+        <div class="space-y-2">
+          {block.data.questions.map((qa) => (
+            <details class="rounded-xl border p-4">
+              <summary class="font-bold cursor-pointer">{qa.q}</summary>
+              <p class="mt-2 opacity-80">{qa.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    );
+    case "problem_solution": return (
+      <div data-block="problem_solution" class="grid gap-6 md:grid-cols-2">
+        <div class="rounded-2xl bg-red-50 p-6">
+          {block.data.problemTitle && <h3 class="font-black text-red-600 mb-2">{block.data.problemTitle}</h3>}
+          {block.data.problemImage && <img src={block.data.problemImage} alt="Problem" class="rounded-xl mb-2" />}
+          <p>{block.data.problem}</p>
+        </div>
+        <div class="rounded-2xl bg-green-50 p-6">
+          {block.data.solutionTitle && <h3 class="font-black text-green-600 mb-2">{block.data.solutionTitle}</h3>}
+          {block.data.solutionImage && <img src={block.data.solutionImage} alt="Solution" class="rounded-xl mb-2" />}
+          <p>{block.data.solution}</p>
+        </div>
+      </div>
+    );
+    case "benefits": return (
+      <div data-block="benefits">
+        {block.data.title && <h3 class="font-black text-center mb-4">{block.data.title}</h3>}
+        <div class="grid gap-4" style={`grid-template-columns: repeat(${block.data.columns ?? 2}, 1fr)`}>
+          {block.data.benefits.map((b) => (
+            <div class="flex gap-3 items-start">
+              {b.icon && <span class="text-2xl">{b.icon}</span>}
+              <div>
+                <div class="font-bold">{b.title}</div>
+                {b.desc && <div class="text-sm opacity-70">{b.desc}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+    case "before_after": return (
+      <div data-block="before_after" class="grid grid-cols-2 gap-4">
+        <div class="relative">
+          <img src={block.data.beforeImage} alt="Before" class="w-full rounded-xl" />
+          {block.data.beforeLabel && <span class="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded-lg text-sm">{block.data.beforeLabel}</span>}
+        </div>
+        <div class="relative">
+          <img src={block.data.afterImage} alt="After" class="w-full rounded-xl" />
+          {block.data.afterLabel && <span class="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded-lg text-sm">{block.data.afterLabel}</span>}
+        </div>
+      </div>
+    );
+    case "product_comparison": return (
+      <div data-block="product_comparison">
+        {block.data.title && <h3 class="font-black text-center mb-4">{block.data.title}</h3>}
+        <table class="w-full border-collapse">
+          <thead>
+            <tr>
+              <th class="p-3 border-b"></th>
+              <th class="p-3 border-b" style="background: color-mix(in srgb, var(--clr-primary) 10%, transparent)">{block.data.ourProduct.name}</th>
+              {block.data.competitors.map((comp) => <th class="p-3 border-b">{comp.name}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {block.data.features.map((feature, i) => (
+              <tr>
+                <td class="p-3 border-b font-bold">{feature}</td>
+                <td class="p-3 border-b" style="background: color-mix(in srgb, var(--clr-primary) 5%, transparent)">{block.data.ourProduct.values[i]}</td>
+                {block.data.competitors.map((comp) => <td class="p-3 border-b">{comp.values[i]}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+    case "trust": return (
+      <div data-block="trust" class="text-center">
+        {block.data.title && <h3 class="font-black mb-3">{block.data.title}</h3>}
+        <div class="flex flex-wrap justify-center gap-3">
+          {block.data.badges.map((badge) => (
+            <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold text-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {badge}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+    case "hero": return (
+      <div data-block="hero" class="text-center py-8">
+        <h1 class="text-4xl font-black mb-2">{block.data.title}</h1>
+        {block.data.subtitle && <p class="text-lg opacity-80">{block.data.subtitle}</p>}
+        {block.data.images?.[0] && <img src={block.data.images[0]} alt={block.data.title} class="w-full rounded-2xl mt-4" />}
+      </div>
+    );
+    case "urgency": return (
+      <div data-block="urgency" class="text-center rounded-2xl bg-red-50 p-4">
+        {block.data.message && <p class="font-bold text-red-600">{block.data.message}</p>}
+        <p class="text-sm mt-1">باقي فقط {block.data.stockLeft} قطع في المخزون</p>
+      </div>
+    );
+    case "pricing_packs": return (
+      <div data-block="pricing_packs" class="grid gap-4" style={`grid-template-columns: repeat(${block.data.packs.length}, 1fr)`}>
+        {block.data.packs.map((pack) => (
+          <div class:list={["rounded-2xl border-2 p-6 text-center", pack.badge && "border-[var(--clr-primary)] bg-[var(--clr-primary)]/5"]}>
+            {pack.badge && <span class="inline-block bg-[var(--clr-primary)] text-white px-3 py-1 rounded-full text-xs font-black mb-2">{pack.badge}</span>}
+            <div class="text-2xl font-black">{pack.qty} قطعة</div>
+            <div class="text-3xl font-black text-[var(--clr-primary)] my-2">{pack.price} درهم</div>
+            {pack.compareAtPrice && <div class="text-sm line-through opacity-50">{pack.compareAtPrice} درهم</div>}
+          </div>
+        ))}
+      </div>
+    );
+    case "features": return (
+      <div data-block="features" class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))">
+        {block.data.items.map((item) => (
+          <div class="text-center">
+            <div class="text-3xl mb-2">{item.icon}</div>
+            <div class="font-bold">{item.title}</div>
+            <div class="text-sm opacity-70">{item.desc}</div>
+          </div>
+        ))}
+      </div>
+    );
+    case "cod_form": return (
+      <div data-block="cod_form" class="rounded-2xl border p-6">
+        {block.data.shippingNotice && <p class="text-center text-sm mb-4">{block.data.shippingNotice}</p>}
+        <button class="btn-primary w-full">{block.data.buttonText ?? "تأكيد الطلب"}</button>
+      </div>
+    );
+    case "reviews": return (
+      <div data-block="reviews" class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))">
+        {block.data.reviews.map((review) => (
+          <div class="rounded-2xl border p-4">
+            {review.image && <img src={review.image} alt={review.author} class="w-12 h-12 rounded-full mb-2" />}
+            <div class="font-bold">{review.author} — {review.city}</div>
+            <div class="text-yellow-500">{[1,2,3,4,5].map((s) => <svg width="12" height="12" viewBox="0 0 24 24" fill={s <= review.rating ? "currentColor" : "none"} stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>)}</div>
+            <p class="text-sm mt-2">{review.text}</p>
+          </div>
+        ))}
+      </div>
+    );
+    default:
+      return null;
+  }
+})}

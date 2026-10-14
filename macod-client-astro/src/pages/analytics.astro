@@ -1,0 +1,11 @@
+---
+/**
+ * Analytics / CPD dashboard.
+ */
+import Layout from "@/layouts/BaseLayout.astro";
+import AnalyticsApp from "@/features/dashboard/components/AnalyticsApp.tsx";
+---
+
+<Layout title="Analytics & CPD">
+  <AnalyticsApp client:load />
+</Layout>

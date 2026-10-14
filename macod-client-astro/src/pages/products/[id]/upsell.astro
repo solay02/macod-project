@@ -1,0 +1,14 @@
+---
+/**
+ * Product upsell config — attach upsell offers to a product.
+ */
+export const prerender = false;
+import Layout from "@/layouts/BaseLayout.astro";
+import UpsellConfig from "@/features/products/components/UpsellConfig.tsx";
+
+const { id } = Astro.params;
+---
+
+<Layout title="Upsell Configuration">
+  <UpsellConfig client:load productId={id!} />
+</Layout>

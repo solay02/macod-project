@@ -1,0 +1,53 @@
+---
+/**
+ * Morocco City Field — free-text input for the shopper's city.
+ *
+ * Why free-text, not a dropdown:
+ *   - Morocco has 72 provinces — a dropdown that long is hostile on a 5" phone.
+ *   - Most COD orders land in the same ~10 cities, but shoppers in smaller
+ *     towns shouldn't have to scroll a 72-row list to find theirs.
+ *   - The server already resolves typed French/Arabic city names against the
+ *     full morocco_provinces table via findMoroccanProvinceByName() in
+ *     cod-shared/lib/morocco-cities.ts — so the input can stay loose on the
+ *     client and get canonicalised on submit.
+ *
+ * The field is named `provinceId` to match CreateShipmentInput.provinceId
+ * (added in MaCod Phase 2) — the server resolves the typed string to a
+ * province slug before dispatching to a Moroccan carrier (Cathedis/Amana/
+ * Sendit).
+ *
+ * ## Integration point (TODO)
+ *
+ * CustomerFields.astro currently renders the Algeria wilaya + commune pair
+ * unconditionally. Wiring this component in requires a country-detection
+ * mechanism — the cleanest is reading `store.currency` from the storefront
+ * config (MAD → Morocco, DZD → Algeria) and conditionally rendering either
+ * the wilaya pair or this city field. That conditional belongs in
+ * CustomerFields.astro and is a follow-up slice; this component is ready
+ * to drop in once the conditional is in place.
+ */
+
+interface Props {
+  /** Content pack (ar | en | fr) — provides label + placeholder strings. */
+  content: any;
+  /** Per-field validation errors keyed by field name. */
+  fieldErrors?: any;
+  /** RTL flag — kept for API symmetry with the rest of the form fields. */
+  isRTL?: boolean;
+}
+
+const { content, fieldErrors = {} } = Astro.props;
+---
+
+<div>
+  <label for="f-morocco-city" class="sr-only">{content.formMoroccoCityLabel}</label>
+  <input
+    id="f-morocco-city" type="text" name="provinceId"
+    required autocomplete="address-level2"
+    placeholder={`${content.formMoroccoCityLabel} *`}
+    class:list={["form-input", fieldErrors.provinceId && "error"]}
+  />
+  {fieldErrors.provinceId && (
+    <p class="text-[0.75rem] text-red-500 font-bold mt-2 ps-1">{fieldErrors.provinceId[0]}</p>
+  )}
+</div>

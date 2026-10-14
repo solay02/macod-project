@@ -1,0 +1,14 @@
+---
+/**
+ * Landing Page Builder page — mounts the React drag-and-drop editor.
+ */
+export const prerender = false;
+import Layout from "@/layouts/BaseLayout.astro";
+import LandingPageBuilder from "@/features/landing-pages/components/LandingPageBuilder.tsx";
+
+const { id } = Astro.params;
+---
+
+<Layout title="Landing Page Builder">
+  <LandingPageBuilder client:load landingPageId={id!} />
+</Layout>

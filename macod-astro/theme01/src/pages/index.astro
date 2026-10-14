@@ -1,0 +1,109 @@
+---
+// ── ezzarostyle Homepage ─────────────────────────────────────────────────────
+// Long, premium minimal clothing storefront.
+// Sections: Hero → Categories → Best Sellers → Brand Story → How It Works →
+// New Arrivals → Features → Promo → Testimonials → Lookbook → Newsletter
+// ─────────────────────────────────────────────────────────────────────────────
+import StoreLayout from "@/theme/layouts/StoreLayout.astro";
+import Hero from "@/theme/components/home/Hero.astro";
+import CategoryCards from "@/theme/components/home/CategoryCards.astro";
+import BestSellers from "@/theme/components/home/BestSellers.astro";
+import HowItWorks from "@/theme/components/home/HowItWorks.astro";
+import NewArrivals from "@/theme/components/home/NewArrivals.astro";
+import FeaturesBar from "@/theme/components/home/FeaturesBar.astro";
+import WhatsAppCTA from "@/theme/components/home/WhatsAppCTA.astro";
+import CustomerTestimonials from "@/theme/components/home/CustomerTestimonials.astro";
+import { Icon } from "astro-icon/components";
+import { getStoreContext } from "@/theme/config/store";
+
+const { config, content } = await getStoreContext();
+const cur = config.currencySymbol;
+---
+
+<StoreLayout config={config} content={content}>
+  {/* ── 1. Hero ───────────────────────────────────────────────────────────── */}
+  <Hero content={content} />
+
+  {/* ── 2. Categories (4 cards: vests, t-shirts, jeans, hoodies) ───────────── */}
+  <CategoryCards content={content} />
+
+  {/* ── 3. Best Sellers ─────────────────────────────────────────────────────── */}
+  <BestSellers currencySymbol={cur} content={content} />
+
+  {/* ── 4. Brand Story (minimal about section) ──────────────────────────────── */}
+  <section class="py-20 px-4" style="background: var(--clr-surface)">
+    <div class="max-w-3xl mx-auto text-center">
+      <div class="text-3xl font-black mb-4 tracking-tight" style="color: var(--clr-text)">
+        ezzaro<span style="color: var(--clr-accent)">style</span>
+      </div>
+      <p class="text-lg leading-relaxed opacity-80" style="color: var(--clr-text-2)">
+        وُلد ezzarostyle من شغف بالأزياء العصرية والجودة العالية. نختار كل قطعة بعناية — من القماش إلى الخياطة —
+        لنقدم لك ملابس تليق بأسلوبك اليومي. سترات أنيقة، تيشيرتات مريحة، جينز متين، وهوديات دافئة.
+        كل ما تحتاجه في مكان واحد، مع الدفع عند الاستلام.
+      </p>
+      <div class="flex items-center justify-center gap-6 mt-8 text-sm font-bold" style="color: var(--clr-text-2)">
+        <span class="flex items-center gap-1.5"><Icon name="heroicons:check-circle" class="w-5 h-5" style="color: var(--clr-accent)" /> جودة مضمونة</span>
+        <span class="flex items-center gap-1.5"><Icon name="heroicons:truck" class="w-5 h-5" style="color: var(--clr-accent)" /> توصيل سريع</span>
+        <span class="flex items-center gap-1.5"><Icon name="heroicons:shield-check" class="w-5 h-5" style="color: var(--clr-accent)" /> دفع آمن</span>
+      </div>
+    </div>
+  </section>
+
+  {/* ── 5. How It Works (COD trust) ─────────────────────────────────────────── */}
+  <HowItWorks content={content} />
+
+  {/* ── 6. New Arrivals ────────────────────────────────────────────────────── */}
+  <NewArrivals currencySymbol={cur} content={content} />
+
+  {/* ── 7. Features Bar ─────────────────────────────────────────────────────── */}
+  <FeaturesBar content={content} />
+
+  {/* ── 8. Lookbook (minimal image grid) ────────────────────────────────────── */}
+  <section class="py-16 px-4">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-2xl sm:text-3xl font-black text-center mb-8" style="color: var(--clr-text)">
+        تشكيلتنا
+      </h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+        <div class="aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+          <Icon name="heroicons:photo" class="w-12 h-12 text-gray-300" />
+        </div>
+        <div class="aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+          <Icon name="heroicons:photo" class="w-12 h-12 text-gray-300" />
+        </div>
+        <div class="aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+          <Icon name="heroicons:photo" class="w-12 h-12 text-gray-300" />
+        </div>
+        <div class="aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+          <Icon name="heroicons:photo" class="w-12 h-12 text-gray-300" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ── 9. Promo / WhatsApp CTA ─────────────────────────────────────────────── */}
+  <WhatsAppCTA content={content} />
+
+  {/* ── 10. Testimonials ────────────────────────────────────────────────────── */}
+  <CustomerTestimonials config={config} content={content} />
+
+  {/* ── 11. Newsletter / Final CTA ──────────────────────────────────────────── */}
+  <section class="py-20 px-4" style="background: var(--clr-text)">
+    <div class="max-w-2xl mx-auto text-center" style="color: white">
+      <h2 class="text-3xl sm:text-4xl font-black mb-3">انضم لعائلة ezzarostyle</h2>
+      <p class="text-lg opacity-80 mb-8">كن أول من يعرف عن التشكيلات الجديدة والعروض الحصرية</p>
+      <a
+        href="/products"
+        class="inline-flex items-center gap-2 px-10 py-4 rounded-2xl font-black text-base transition-all active:scale-95"
+        style="background: var(--clr-accent); color: var(--clr-text)"
+      >
+        تسوق الآن
+        <Icon name="heroicons:arrow-left" class="w-5 h-5" />
+      </a>
+    </div>
+  </section>
+</StoreLayout>
+
+<script>
+  import "@/theme/scripts/ezzaro-enhancements";
+</script>

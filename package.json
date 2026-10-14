@@ -1,0 +1,17 @@
+{
+  "name": "macod",
+  "private": true,
+  "description": "MaCod — COD e-commerce platform monorepo (Cloudflare Workers + Astro + D1).",
+  "workspaces": [
+    "macod-shared",
+    "macod-server",
+    "macod-client-astro",
+    "macod-astro/theme01"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "vite": "^8.2.2"
+  }
+}
